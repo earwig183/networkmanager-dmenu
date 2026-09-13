@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# encoding:utf8
 """NetworkManager command line dmenu script.
 
 To add new connections or enable/disable networking requires policykit
@@ -21,10 +20,6 @@ The command line argument takes precedence over the environment variable.
 
 __version__ = "2.7.1"
 
-from collections import Counter
-from os.path import basename, expanduser, isfile
-from shutil import which
-from time import localtime, monotonic, sleep, strftime
 import argparse
 import configparser
 import locale
@@ -35,6 +30,10 @@ import struct
 import subprocess
 import sys
 import uuid
+from collections import Counter
+from os.path import basename, expanduser, isfile
+from shutil import which
+from time import localtime, monotonic, sleep, strftime
 
 import gi
 
@@ -434,7 +433,7 @@ def dmenu_cmd(prompt, active_lines=None):
         "dmenu": ["-p", str(prompt)],
         "fuzzel": ["--dmenu", "--placeholder", str(prompt)],
         "rofi": ["-dmenu", "-p", str(prompt)],
-        "tofi": ["--require-match=false", f"--prompt-text={str(prompt)}: "],
+        "tofi": ["--require-match=false", f"--prompt-text={prompt!s}: "],
         "walker": ["-d", "-p", str(prompt), "-k"],
         "wmenu": ["-p", str(prompt)],
         "wofi": ["--dmenu", "-p", str(prompt)],
@@ -457,22 +456,27 @@ def dmenu_cmd(prompt, active_lines=None):
             command.extend(["-m", "-q"])
     # Passphrase prompts
     obscure = CONF.getboolean("dmenu_passphrase", "obscure", fallback=False)
-    if prompt == "Passphrase" and obscure is True:
-        obscure_color = CONF.get(
-            "dmenu_passphrase", "obscure_color", fallback="#222222"
-        )
-        pass_prompts = {
-            "bemenu": ["-x", "indicator"],
-            "dmenu": dmenu_pass(cmd_base, obscure_color),
-            "fuzzel": ["--password"],
-            "rofi": ["-password"],
-            "tofi": ["--hide-input=true", "--hidden-character=*"],
-            "walker": ["-y", "-I"],
-            "wmenu": ["-P"],
-            "wofi": ["-P"],
-            "yofi": ["--password"],
+    if prompt == "Passphrase":
+        prompt_onlys = {
+            "fuzzel": ['--prompt-only', '> ']
         }
-        command.extend(pass_prompts.get(cmd_base, []))
+        command.extend(prompt_onlys.get(cmd_base, []))
+        if obscure is True:
+            obscure_color = CONF.get(
+                "dmenu_passphrase", "obscure_color", fallback="#222222"
+            )
+            pass_prompts = {
+                "bemenu": ["-x", "indicator"],
+                "dmenu": dmenu_pass(cmd_base, obscure_color),
+                "fuzzel": ["--password"],
+                "rofi": ["-password"],
+                "tofi": ["--hide-input=true", "--hidden-character=*"],
+                "walker": ["-y", "-I"],
+                "wmenu": ["-P"],
+                "wofi": ["-P"],
+                "yofi": ["--password"],
+            }
+            command.extend(pass_prompts.get(cmd_base, []))
 
     if cmd_base == "yofi":
         command.extend(["dialog"])
@@ -493,7 +497,7 @@ def choose_adapter(client):
         sys.exit()
     devices = [i for i in devices if i.get_iface() == sel.strip()]
     if len(devices) != 1:
-        raise ValueError(f"Selection was ambiguous: '{str(sel.strip())}'")
+        raise ValueError(f"Selection was ambiguous: '{sel.strip()!s}'")
     return devices[0]
 
 
@@ -550,7 +554,7 @@ def choose_connection(conns):
         sys.exit()
     conns = [i for i, name in zip(conns, names) if name == sel.rstrip("\n")]
     if len(conns) != 1:
-        raise ValueError(f"Selection was ambiguous: '{str(sel.strip())}'")
+        raise ValueError(f"Selection was ambiguous: '{sel.strip()!s}'")
     return conns[0]
 
 
@@ -897,7 +901,7 @@ def strength_icon(signal_strength):
     return ""
 
 
-def create_ap_actions(aps, active_ap, active_connection, adapter):  # noqa pylint: disable=too-many-locals,line-too-long
+def create_ap_actions(aps, active_ap, active_connection, adapter):
     """For each AP in a list, create the string and its attached function
     (activate/deactivate)
 
@@ -1185,7 +1189,7 @@ def get_selection(all_actions):
             if str(i).strip() == sel_text and i.is_active == sel_active
         ]
     if len(action) != 1:
-        raise ValueError(f"Selection was ambiguous: '{str(sel.strip())}'")
+        raise ValueError(f"Selection was ambiguous: '{sel.strip()!s}'")
     return action[0]
 
 
@@ -1391,7 +1395,7 @@ def delete_connection():
         sys.exit()
     action = [i for i in conn_acts if str(i) == sel.rstrip("\n")]
     if len(action) != 1:
-        raise ValueError(f"Selection was ambiguous: {str(sel)}")
+        raise ValueError(f"Selection was ambiguous: {sel!s}")
     confirm = run_dmenu(
         dmenu_cmd(f"DELETE '{sel.strip()}'?"), "No\nYes"
     ).stdout
